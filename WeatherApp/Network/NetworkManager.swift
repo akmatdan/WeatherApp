@@ -10,9 +10,9 @@ import Foundation
 final class NetworkManager<T: Codable> {
     static func fetch(for url: URL, completion: @escaping (Result<T, NetworkError>) -> Void) {
         URLSession.shared.dataTask(with: url) { (data, response, error) in
-            guard error == nil
-            else {
-                completion(.failure(.error(err: error!.localizedDescription)))
+            guard error == nil else {
+                print(String(describing: error!))
+                completion(.failure(.error(error: error!.localizedDescription)))
                 return
             }
             
@@ -20,8 +20,19 @@ final class NetworkManager<T: Codable> {
                 completion(.failure(.InvalidResponse))
                 return
             }
-        }
-        .resume()
+            
+            guard let data = data else {
+                completion(.failure(.InvalidData))
+                return
+            }
+            do {
+            let json = try JSONDecoder().decode(T.self, from: data)
+            completion(.success(json))
+            } catch let err {
+                print(String(describing: err))
+                completion(.failure(.decodingError(err: err.localizedDescription)))
+            }
+        }.resume()
     }
 }
 
@@ -29,4 +40,5 @@ enum NetworkError: Error {
     case InvalidResponse
     case InvalidData
     case error(error: String)
+    case decodingError(err: String)
 }
